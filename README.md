@@ -28,20 +28,6 @@ Using the existing `services/`  directory included with this repo:
 ```
 $ ls services/
 bar   foo
-$ cat services/foo
-#!/bin/sh
-
-echo "foo: hello from $$"
-sleep 3
-echo "foo: exiting"
-
-$ cat services/bar
-#!/bin/sh
-
-while true; do
-	echo "bar: hello from $$"
-	sleep 1000
-done
 
 $ ./ctsup ./services/
 [2026-08-30T00:36:41.277Z] found 2 service files
@@ -59,7 +45,6 @@ foo: hello from 3351
 [2026-08-30T00:36:46.934Z] sending SIGTERM to all contracts
 [2026-08-30T00:36:46.936Z] bar: contract 3265 empty
 [2026-08-30T00:36:46.936Z] foo: contract 3266 empty
-$
 ```
 
 License
