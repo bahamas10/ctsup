@@ -1,0 +1,6 @@
+#!/bin/sh
+# an example daemon that exits, which means `ctsup` will restart it
+
+echo "foo: hello from $$"
+sleep 3
+echo "foo: exiting"

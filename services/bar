@@ -1,0 +1,7 @@
+#!/bin/sh
+# an example daemon that runs forever
+
+while true; do
+	echo "bar: hello from $$"
+	sleep 1000
+done
