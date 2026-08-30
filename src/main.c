@@ -328,7 +328,8 @@ start_service(service_t *svc)
 	}
 
 	svc->ctid = ctid;
-	LOG("%s: started pid %ld contract %ld\n", svc->name, pid, ctid);
+	LOG("%s: started pid %ld contract %ld\n", (long)svc->name, pid,
+	    (long)ctid);
 
 	if (clearerr != 0) {
 		errno = clearerr;
@@ -370,7 +371,8 @@ static int
 abandon_contract(ctid_t ctid)
 {
 	char path[PATH_MAX];
-	snprintf(path, sizeof (path), CTFS_ROOT "/process/%ld/ctl", ctid);
+	snprintf(path, sizeof (path), CTFS_ROOT "/process/%ld/ctl",
+	    (long) ctid);
 
 	int fd = open(path, O_WRONLY);
 	if (fd == -1) {
@@ -415,7 +417,7 @@ signal_services(int sig)
 				continue;
 			}
 			LOG("%s: cannot signal contract %ld: %s\n",
-			    svc->name, svc->ctid, strerror(errno));
+			    svc->name, (long)svc->ctid, strerror(errno));
 		}
 	}
 }
@@ -481,7 +483,7 @@ process_contract_event(int eventfd, service_t **emptied)
 		return 0;
 	}
 
-	LOG("%s: contract %ld empty\n", svc->name, ctid);
+	LOG("%s: contract %ld empty\n", svc->name, (long)ctid);
 
 	// abandon the contract... we'll make a new one when we restart it
 	if (abandon_contract(ctid) == -1) {
