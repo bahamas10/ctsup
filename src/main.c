@@ -22,7 +22,7 @@
  *
  *   - stop restarting services
  *   - send SIGTERM to every service contract
- *   - wait up to SHUTDOWN_TIMEOUT seconds
+ *   - wait up to SHUTDOWN_TIMEOUT_MS
  *   - SIGKILL anything still alive
  *   - wait for all contracts to become empty
  *   - abandon the contracts and exit
@@ -62,10 +62,20 @@
 
 #include <libcontract.h>
 
-#define PROGNAME          "ctsup"
-#define RESTART_DELAY     1
-#define SHUTDOWN_TIMEOUT  5
-#define POLL_INTERVAL_MS  250
+#define PROGNAME "ctsup"
+
+// seconds to sleep before restarting a service
+#define RESTART_DELAY 1
+
+// when instructed to shutdown, seconds between asking services to shutdown
+// nicely with SIGTERM and forcing services to shutdown with SIGKILL
+#define SHUTDOWN_TIMEOUT_MS  5000
+
+// when instructed to shutdown, how often to resend the SIGTERM signal to
+// services (until everyhing is done or before the SIGKILL)
+#define SIGNAL_REPEAT_MS  250
+
+// timestamp format used for logging
 #define DATEFMT           "%Y-%m-%dT%H:%M:%S"
 
 /*
@@ -617,30 +627,42 @@ wait_for_event(int eventfd, int timeout_ms)
 static int
 drain_services(int eventfd, int sig, hrtime_t deadline)
 {
-	// we keep trying until everything is dead, or we hit the optional
-	// timeout
+	hrtime_t next_signal = 0;
+
+	/*
+	 * keep trying until everything is dead or we hit the optional timeout.
+	 * the signal is sent immediately, and then periodically after to make
+	 * sure that any new processes that have been forked will know they need
+	 * to die.
+	 */
 	while (!all_services_stopped()) {
 		service_t *empty;
-		int timeout = POLL_INTERVAL_MS;
+		hrtime_t now = gethrtime();
 
-		if (deadline != 0) {
-			hrtime_t remaining = deadline - gethrtime();
-			if (remaining <= 0) {
-				// we hit the timeout, just give up
-				return 0;
-			}
-
-			// cound up from ns to ms
-			int remaining_ms = (remaining + 999999) / 1000000;
-			if (remaining_ms < timeout) {
-				timeout = remaining_ms;
-			}
+		// check deadline timer
+		if (deadline != 0 && now >= deadline) {
+			return 0;
 		}
 
-		// signal all services to stop
-		signal_services(sig);
+		// only signal every SIGNAL_REPEAT_MS
+		if (now >= next_signal) {
+			signal_services(sig);
+			next_signal = now +
+			    (hrtime_t)SIGNAL_REPEAT_MS * 1000000;
+		}
 
-		// wait up to the deadline for events
+		// wait until the next signal is due, unless the overall
+		// shutdown deadline comes first.
+		hrtime_t wait_until = next_signal;
+		if (deadline != 0 && deadline < wait_until) {
+			wait_until = deadline;
+		}
+
+		hrtime_t remaining = wait_until - gethrtime();
+		int timeout = remaining <= 0 ? 0 :
+		    (int)((remaining + 999999) / 1000000);
+
+		// wait for the next event or signal interval
 		int res = wait_for_event(eventfd, timeout);
 		if (res == -1) {
 			return -1;
@@ -663,7 +685,7 @@ static int
 shutdown_services(int eventfd)
 {
 	hrtime_t deadline = gethrtime() +
-	    (hrtime_t)SHUTDOWN_TIMEOUT * 1000000000;
+	    (hrtime_t)SHUTDOWN_TIMEOUT_MS * 1000000;
 
 	LOG("sending SIGTERM to all contracts\n");
 	int res = drain_services(eventfd, SIGTERM, deadline);
