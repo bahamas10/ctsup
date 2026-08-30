@@ -372,7 +372,7 @@ abandon_contract(ctid_t ctid)
 {
 	char path[PATH_MAX];
 	snprintf(path, sizeof (path), CTFS_ROOT "/process/%ld/ctl",
-	    (long) ctid);
+	    (long)ctid);
 
 	int fd = open(path, O_WRONLY);
 	if (fd == -1) {
