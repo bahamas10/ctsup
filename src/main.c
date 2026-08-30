@@ -784,7 +784,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	LOG("something went wrong, shutting down.\n");
+	LOG("shutting down.\n");
 	if (shutdown_services(eventfd) == -1) {
 		perror("shutdown");
 		exit_status = 1;
