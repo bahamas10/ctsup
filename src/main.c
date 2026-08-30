@@ -103,6 +103,21 @@ static service_t *g_services;
 static volatile sig_atomic_t g_shutting_down;
 
 /*
+ * open(2) wrapper that handles EINTR.
+ */
+static int
+open_nointr(const char *path, int flags)
+{
+	int fd;
+
+	do {
+		fd = open(path, flags);
+	} while (fd == -1 && errno == EINTR);
+
+	return fd;
+}
+
+/*
  * Print the usage message.
  */
 void usage(FILE *s) {
@@ -209,7 +224,7 @@ setup_signals(void)
 static ctid_t
 latest_contract(void)
 {
-	int fd = open(CTFS_ROOT "/process/latest", O_RDONLY);
+	int fd = open_nointr(CTFS_ROOT "/process/latest", O_RDONLY);
 	if (fd == -1) {
 		return -1;
 	}
@@ -239,7 +254,7 @@ contract_template(void)
 {
 	int err;
 
-	int fd = open(CTFS_ROOT "/process/template", O_RDWR);
+	int fd = open_nointr(CTFS_ROOT "/process/template", O_RDWR);
 	if (fd == -1) {
 		return -1;
 	}
@@ -384,7 +399,7 @@ abandon_contract(ctid_t ctid)
 	snprintf(path, sizeof (path), CTFS_ROOT "/process/%ld/ctl",
 	    (long)ctid);
 
-	int fd = open(path, O_WRONLY);
+	int fd = open_nointr(path, O_WRONLY);
 	if (fd == -1) {
 		return -1;
 	}
@@ -495,13 +510,18 @@ process_contract_event(int eventfd, service_t **emptied)
 
 	LOG("%s: contract %ld empty\n", svc->name, (long)ctid);
 
+	/*
+	 * The EMPTY event means the service is stopped even if abandoning its
+	 * contract fails.  Clear the id first so shutdown does not wait for an
+	 * EMPTY event that has already been consumed.
+	 */
+	svc->ctid = -1;
+
 	// abandon the contract... we'll make a new one when we restart it
 	if (abandon_contract(ctid) == -1) {
 		ct_event_free(ev);
 		return -1;
 	}
-
-	svc->ctid = -1;
 
 	*emptied = svc;
 	ct_event_free(ev);
@@ -738,7 +758,7 @@ main(int argc, char **argv)
 		return 1;
 	}
 
-	int eventfd = open(CTFS_ROOT "/process/pbundle", O_RDONLY);
+	int eventfd = open_nointr(CTFS_ROOT "/process/pbundle", O_RDONLY);
 	if (eventfd == -1) {
 		perror("open pbundle");
 		return 1;
@@ -771,7 +791,7 @@ main(int argc, char **argv)
 		service_t *empty;
 		res = process_contract_event(eventfd, &empty);
 		if (res == -1) {
-			perror("ct_event_read");
+			perror("process_contract_event");
 			exit_status = 1;
 			break;
 		}
