@@ -67,12 +67,12 @@
 // seconds to sleep before restarting a service
 #define RESTART_DELAY 1
 
-// when instructed to shutdown, seconds between asking services to shutdown
+// when instructed to shutdown, milliseconds between asking services to shutdown
 // nicely with SIGTERM and forcing services to shutdown with SIGKILL
 #define SHUTDOWN_TIMEOUT_MS  5000
 
-// when instructed to shutdown, how often to resend the SIGTERM signal to
-// services (until everyhing is done or before the SIGKILL)
+// when instructed to shutdown, how often to resend the SIGTERM/SIGKILL signals
+// to the services (until everything is killed)
 #define SIGNAL_REPEAT_MS  250
 
 // timestamp format used for logging
@@ -81,7 +81,7 @@
 /*
  * A linked-list of all "service" objects found.
  *
- * Every regular executable file found in the services directory is treade as a
+ * Every regular executable file found in the services directory is treated as a
  * service.
  */
 typedef struct service {
@@ -484,7 +484,7 @@ process_contract_event(int eventfd, service_t **emptied)
 	}
 
 	// if we are here then one of our contracts is now empty! meaning, it
-	// now longer has PIDs in it.
+	// no longer has PIDs in it.
 
 	// find the associated "service" object for the contract id
 	service_t *svc = find_service(ctid);
