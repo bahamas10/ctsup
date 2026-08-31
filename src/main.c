@@ -120,7 +120,9 @@ open_nointr(const char *path, int flags)
 /*
  * Print the usage message.
  */
-void usage(FILE *s) {
+static void
+usage(FILE *s)
+{
 	fprintf(s, "Usage: %s <dir>\n", PROGNAME);
 	fprintf(s, "\n");
 	fprintf(s, "Environment Variables\n");
@@ -134,9 +136,11 @@ void usage(FILE *s) {
  *
  * Usage is the same as printf().
  */
-void LOG(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+static void LOG(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
-void LOG(const char *fmt, ...) {
+static void
+LOG(const char *fmt, ...)
+{
 	if (g_opts.quiet) {
 		return;
 	}
