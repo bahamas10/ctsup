@@ -569,9 +569,28 @@ load_services(const char *dir)
 		return -1;
 	}
 
+	// loop the directories
 	int n = 0;
-	struct dirent *de;
-	while ((de = readdir(dp)) != NULL) {
+	while (true) {
+		// clear errno to test for readdir errors
+		errno = 0;
+		struct dirent *de = readdir(dp);
+		if (de == NULL) {
+			int err = errno;
+
+			if (err == 0) {
+				// readdir finished successfully
+				break;
+			} else {
+				// readdir had an error
+				closedir(dp);
+				fprintf(stderr, "readdir %s: %s\n", dir,
+				    strerror(err));
+				errno = err;
+				return -1;
+			}
+		}
+
 		// skip hidden files
 		if (de->d_name[0] == '.') {
 			continue;
