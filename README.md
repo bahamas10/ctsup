@@ -47,6 +47,20 @@ foo: hello from 3351
 [2026-08-30T00:36:46.936Z] foo: contract 3266 empty
 ```
 
+Development
+-----------
+
+Ensure your code passes the style checks:
+
+```
+$ make check
+./tools/check ./src/*.c ./tools/* *.md Makefile
+checking:  ./src/main.c
+checking:  ./tools/check
+checking:  README.md
+checking:  Makefile
+```
+
 License
 -------
 
