@@ -316,10 +316,7 @@ start_service(service_t *svc)
 		return -1;
 	}
 
-	/*
-	 * block all signals here to ensure the child doesn't inherit our signal
-	 * handler.
-	 */
+	// block shutdown signals so the child doesn't react to them
 	sigset_t blockset;
 	sigset_t oldset;
 	sigemptyset(&blockset);
@@ -359,10 +356,15 @@ start_service(service_t *svc)
 		}
 
 		// in the child let signals fall through normally
-		if (signal(SIGTERM, SIG_DFL) == SIG_ERR ||
-		    signal(SIGINT, SIG_DFL) == SIG_ERR ||
-		    signal(SIGCHLD, SIG_DFL) == SIG_ERR) {
-			perror("signal");
+		struct sigaction sa;
+		memset(&sa, 0, sizeof (sa));
+		sa.sa_handler = SIG_DFL;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		if (sigaction(SIGTERM, &sa, NULL) == -1 ||
+		    sigaction(SIGINT, &sa, NULL) == -1 ||
+		    sigaction(SIGCHLD, &sa, NULL) == -1) {
+			perror("sigaction");
 			_exit(127);
 		}
 		if (sigprocmask(SIG_SETMASK, &oldset, NULL) == -1) {
