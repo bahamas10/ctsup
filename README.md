@@ -41,7 +41,7 @@ foo: exiting
 [2026-08-30T00:36:45.287Z] foo: started pid 3351 contract 3266
 foo: hello from 3351
 ^C
-[2026-08-30T00:36:46.934Z] something went wrong, shutting down.
+[2026-08-30T00:36:46.934Z] shutting down.
 [2026-08-30T00:36:46.934Z] sending SIGTERM to all contracts
 [2026-08-30T00:36:46.936Z] bar: contract 3265 empty
 [2026-08-30T00:36:46.936Z] foo: contract 3266 empty

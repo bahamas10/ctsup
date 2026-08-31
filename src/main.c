@@ -22,7 +22,7 @@
  *
  *   - stop restarting services
  *   - send SIGTERM to every service contract
- *   - wait up to SHUTDOWN_TIMEOUT_MS
+ *   - wait up to the graceful shutdown timeout
  *   - SIGKILL anything still alive
  *   - wait for all contracts to become empty
  *   - abandon the contracts and exit
@@ -672,7 +672,6 @@ load_services(const char *dir)
 			return -1;
 		}
 
-		// todo: do we need to error check this?
 		strlcpy(svc->name, de->d_name, sizeof (svc->name));
 		strlcpy(svc->path, path, sizeof (svc->path));
 		svc->ctid = -1;
@@ -821,19 +820,21 @@ shutdown_services(int eventfd)
 int
 main(int argc, char **argv)
 {
-	(void) argc;
-
 	int exit_status = 0;
 	g_opts.color = getenv("NO_COLOR") == NULL &&
 	               getenv("CTSUP_NO_COLOR") == NULL;
 	g_opts.quiet = getenv("CTSUP_QUIET") != NULL;
 
-	char *service_dir = argv[1];
-	if (service_dir == NULL ||
-	    (strcmp(service_dir, "-h") == 0) ||
-	    (strcmp(service_dir, "--help") == 0)) {
+	if (argc < 2) {
 		usage(stderr);
 		return 2;
+	}
+
+	char *service_dir = argv[1];
+	if (strcmp(service_dir, "-h") == 0 ||
+	    strcmp(service_dir, "--help") == 0) {
+		usage(stdout);
+		return 0;
 	}
 
 	int n = load_services(service_dir);
