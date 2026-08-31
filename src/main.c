@@ -75,6 +75,9 @@
 // to the services (until everything is killed)
 #define SIGNAL_REPEAT_MS  250
 
+// maximum time to wait for a contract event before checking for shutdown
+#define EVENT_POLL_MS  250
+
 // timestamp format used for logging
 #define DATEFMT           "%Y-%m-%dT%H:%M:%S"
 
@@ -783,7 +786,7 @@ main(int argc, char **argv)
 
 	// main loop - monitor all running services
 	while (!g_shutting_down) {
-		int res = wait_for_event(eventfd, -1);
+		int res = wait_for_event(eventfd, EVENT_POLL_MS);
 		if (res == -1) {
 			// poll failed - we have to just exit
 			perror("wait_for_event");
