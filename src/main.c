@@ -103,15 +103,16 @@ static service_t *g_services;
 static volatile sig_atomic_t g_shutting_down;
 
 /*
- * open(2) wrapper that handles EINTR.
+ * Open an internal file descriptor with close-on-exec, retrying if the call
+ * is interrupted by a signal.
  */
 static int
-open_nointr(const char *path, int flags)
+open_internal(const char *path, int flags)
 {
 	int fd;
 
 	do {
-		fd = open(path, flags);
+		fd = open(path, flags | O_CLOEXEC);
 	} while (fd == -1 && errno == EINTR);
 
 	return fd;
@@ -230,7 +231,7 @@ setup_signals(void)
 static ctid_t
 latest_contract(void)
 {
-	int fd = open_nointr(CTFS_ROOT "/process/latest", O_RDONLY);
+	int fd = open_internal(CTFS_ROOT "/process/latest", O_RDONLY);
 	if (fd == -1) {
 		return -1;
 	}
@@ -260,7 +261,7 @@ contract_template(void)
 {
 	int err;
 
-	int fd = open_nointr(CTFS_ROOT "/process/template", O_RDWR);
+	int fd = open_internal(CTFS_ROOT "/process/template", O_RDWR);
 	if (fd == -1) {
 		return -1;
 	}
@@ -405,7 +406,7 @@ abandon_contract(ctid_t ctid)
 	snprintf(path, sizeof (path), CTFS_ROOT "/process/%ld/ctl",
 	    (long)ctid);
 
-	int fd = open_nointr(path, O_WRONLY);
+	int fd = open_internal(path, O_WRONLY);
 	if (fd == -1) {
 		return -1;
 	}
@@ -764,7 +765,7 @@ main(int argc, char **argv)
 		return 1;
 	}
 
-	int eventfd = open_nointr(CTFS_ROOT "/process/pbundle", O_RDONLY);
+	int eventfd = open_internal(CTFS_ROOT "/process/pbundle", O_RDONLY);
 	if (eventfd == -1) {
 		perror("open pbundle");
 		return 1;
