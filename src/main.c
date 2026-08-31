@@ -316,6 +316,24 @@ start_service(service_t *svc)
 		return -1;
 	}
 
+	/*
+	 * block all signals here to ensure the child doesn't inherit our signal
+	 * handler.
+	 */
+	sigset_t blockset;
+	sigset_t oldset;
+	sigemptyset(&blockset);
+	sigaddset(&blockset, SIGTERM);
+	sigaddset(&blockset, SIGINT);
+	if (sigprocmask(SIG_BLOCK, &blockset, &oldset) == -1) {
+		int err = errno;
+		ct_tmpl_clear(tmpl);
+		close(tmpl);
+		errno = err;
+		perror("sigprocmask");
+		return -1;
+	}
+
 	// fork the process and immediately close the contract template - we
 	// store the errno so we can print it in the event of a fork(2) problem.
 	pid_t pid = fork();
@@ -326,6 +344,7 @@ start_service(service_t *svc)
 
 	// fork broke - we can't meaningfully continue
 	if (pid == -1) {
+		sigprocmask(SIG_SETMASK, &oldset, NULL);
 		errno = forkerr;
 		perror("fork");
 		return -1;
@@ -340,13 +359,27 @@ start_service(service_t *svc)
 		}
 
 		// in the child let signals fall through normally
-		signal(SIGTERM, SIG_DFL);
-		signal(SIGINT, SIG_DFL);
-		signal(SIGCHLD, SIG_DFL);
+		if (signal(SIGTERM, SIG_DFL) == SIG_ERR ||
+		    signal(SIGINT, SIG_DFL) == SIG_ERR ||
+		    signal(SIGCHLD, SIG_DFL) == SIG_ERR) {
+			perror("signal");
+			_exit(127);
+		}
+		if (sigprocmask(SIG_SETMASK, &oldset, NULL) == -1) {
+			perror("sigprocmask");
+			_exit(127);
+		}
 
+		// start the service
 		execl(svc->path, svc->name, (char *)NULL);
 		perror(svc->path);
 		_exit(127);
+	}
+
+	// unblock signals
+	int maskerr = 0;
+	if (sigprocmask(SIG_SETMASK, &oldset, NULL) == -1) {
+		maskerr = errno;
 	}
 
 	// get the process of the last forked program
@@ -369,6 +402,13 @@ start_service(service_t *svc)
 	if (clearerr != 0) {
 		errno = clearerr;
 		LOG("%s: cannot clear contract template: %s\n",
+		    svc->name, strerror(errno));
+		return -1;
+	}
+
+	if (maskerr != 0) {
+		errno = maskerr;
+		LOG("%s: cannot restore signal mask: %s\n",
 		    svc->name, strerror(errno));
 		return -1;
 	}
