@@ -134,6 +134,8 @@ void usage(FILE *s) {
  *
  * Usage is the same as printf().
  */
+void LOG(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
 void LOG(const char *fmt, ...) {
 	if (g_opts.quiet) {
 		return;
@@ -353,7 +355,7 @@ start_service(service_t *svc)
 	}
 
 	svc->ctid = ctid;
-	LOG("%s: started pid %ld contract %ld\n", (long)svc->name, pid,
+	LOG("%s: started pid %ld contract %ld\n", svc->name, (long)pid,
 	    (long)ctid);
 
 	if (clearerr != 0) {
