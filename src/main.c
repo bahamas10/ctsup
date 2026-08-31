@@ -69,17 +69,17 @@
 
 // when instructed to shutdown, milliseconds between asking services to shutdown
 // nicely with SIGTERM and forcing services to shutdown with SIGKILL
-#define SHUTDOWN_TIMEOUT_MS  5000
+#define SHUTDOWN_TIMEOUT_MS 5000
 
 // when instructed to shutdown, how often to resend the SIGTERM/SIGKILL signals
 // to the services (until everything is killed)
-#define SIGNAL_REPEAT_MS  250
+#define SIGNAL_REPEAT_MS 250
 
 // maximum time to wait for a contract event before checking for shutdown
-#define EVENT_POLL_MS  250
+#define EVENT_POLL_MS 250
 
 // timestamp format used for logging
-#define DATEFMT           "%Y-%m-%dT%H:%M:%S"
+#define DATEFMT "%Y-%m-%dT%H:%M:%S"
 
 /*
  * A linked-list of all "service" objects found.
