@@ -16,8 +16,8 @@ Usage: ctsup <dir>
 
 Environment Variables
   CTSUP_QUIET       disable log messages from this program
-  CTSUP_NO_COLOR    disables color output if set
-  NO_COLOR          same as above but may affect down stream services
+  CTSUP_NO_COLOR    disables color output from this program
+  NO_COLOR          same as above but may affect downstream services
 ```
 
 Example

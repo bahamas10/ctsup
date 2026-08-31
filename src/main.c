@@ -167,8 +167,8 @@ usage(FILE *s)
 	fprintf(s, "\n");
 	fprintf(s, "Environment Variables\n");
 	fprintf(s, "  CTSUP_QUIET       disable log messages from this program\n");
-	fprintf(s, "  CTSUP_NO_COLOR    disables color output if set\n");
-	fprintf(s, "  NO_COLOR          same as above but may affect down stream services\n");
+	fprintf(s, "  CTSUP_NO_COLOR    disables color output from this program\n");
+	fprintf(s, "  NO_COLOR          same as above but may affect downstream services\n");
 }
 
 /*
