@@ -108,15 +108,51 @@ static volatile sig_atomic_t g_shutting_down;
 /*
  * Open an internal file descriptor with close-on-exec, retrying if the call
  * is interrupted by a signal.
+ *
+ * When opening a file in CTFS we can't pass O_CLOEXEC because we will get hit
+ * with EINVAL.  Instead, we open the file normally and *then* set the
+ * FD_CLOEXEC flag after the fact which works for both regular files and files
+ * inside in CTFS.
+ *
+ * Since we only have a single-thread in this program we don't have a
+ * race-condition to worry about.
  */
 static int
 open_internal(const char *path, int flags)
 {
 	int fd;
 
+	// open the file
 	do {
-		fd = open(path, flags | O_CLOEXEC);
+		fd = open(path, flags);
 	} while (fd == -1 && errno == EINTR);
+	if (fd == -1) {
+		return -1;
+	}
+
+	// get the flags set on the fd
+	int fdflags;
+	do {
+		fdflags = fcntl(fd, F_GETFD);
+	} while (fdflags == -1 && errno == EINTR);
+	if (fdflags == -1) {
+		int err = errno;
+		close(fd);
+		errno = err;
+		return -1;
+	}
+
+	// add CLOEXEC to the fd
+	int res;
+	do {
+		res = fcntl(fd, F_SETFD, fdflags | FD_CLOEXEC);
+	} while (res == -1 && errno == EINTR);
+	if (res == -1) {
+		int err = errno;
+		close(fd);
+		errno = err;
+		return -1;
+	}
 
 	return fd;
 }
