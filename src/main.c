@@ -436,10 +436,14 @@ signal_contract(ctid_t ctid, int sig)
 
 /*
  * Send a signal to every currently-running service.
+ *
+ * Returns 0 on success and -1 if any contract could not be signaled.  ESRCH
+ * is ignored because the contract may already be empty with its event pending.
  */
-static void
+static int
 signal_services(int sig)
 {
+	int saved_errno = 0;
 	service_t *svc;
 
 	for (svc = g_services; svc != NULL; svc = svc->next) {
@@ -451,10 +455,22 @@ signal_services(int sig)
 			if (errno == ESRCH) {
 				continue;
 			}
+
+			int err = errno;
 			LOG("%s: cannot signal contract %ld: %s\n",
-			    svc->name, (long)svc->ctid, strerror(errno));
+			    svc->name, (long)svc->ctid, strerror(err));
+			if (saved_errno == 0) {
+				saved_errno = err;
+			}
 		}
 	}
+
+	if (saved_errno != 0) {
+		errno = saved_errno;
+		return -1;
+	}
+
+	return 0;
 }
 
 /*
@@ -676,7 +692,9 @@ drain_services(int eventfd, int sig, hrtime_t deadline)
 
 		// only signal every SIGNAL_REPEAT_MS
 		if (now >= next_signal) {
-			signal_services(sig);
+			if (signal_services(sig) == -1) {
+				return -1;
+			}
 			next_signal = now +
 			    (hrtime_t)SIGNAL_REPEAT_MS * 1000000;
 		}
