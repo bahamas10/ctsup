@@ -660,7 +660,15 @@ wait_for_event(int eventfd, int timeout_ms)
 		return 1;
 	}
 
-	return 0;
+	// a positive poll result without POLLIN is an endpoint failure or an
+	// event this function cannot handle - just give up.
+	if (pfd.revents & POLLNVAL) {
+		errno = EBADF;
+	} else {
+		errno = EIO;
+	}
+
+	return -1;
 }
 
 /*
