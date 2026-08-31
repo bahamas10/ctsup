@@ -166,9 +166,12 @@ usage(FILE *s)
 	fprintf(s, "Usage: %s <dir>\n", PROGNAME);
 	fprintf(s, "\n");
 	fprintf(s, "Environment Variables\n");
-	fprintf(s, "  CTSUP_QUIET       disable log messages from this program\n");
-	fprintf(s, "  CTSUP_NO_COLOR    disables color output from this program\n");
-	fprintf(s, "  NO_COLOR          same as above but may affect downstream services\n");
+	fprintf(s, "  CTSUP_QUIET       \
+	    disable log messages from this program\n");
+	fprintf(s, "  CTSUP_NO_COLOR    \
+	    disables color output from this program\n");
+	fprintf(s, "  NO_COLOR          \
+	    same as above but may affect downstream services\n");
 }
 
 /*
@@ -945,7 +948,7 @@ main(int argc, char **argv)
 			break;
 		}
 
-		LOG("%s: restarting in %d second\n",
+		LOG("%s: restarting in %d second(s)\n",
 		    empty->name, RESTART_DELAY);
 		sleep(RESTART_DELAY);
 
