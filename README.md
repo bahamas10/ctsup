@@ -10,6 +10,24 @@ Usage
 $ ctsup /path/to/services
 ```
 
+Every regular executable file directly inside the directory is treated as a
+service to start and manage:
+
+Each service:
+
+- is executed directly (no shell)
+- receives its own contract
+- is restarted RESTART_DELAY (1 second) after its contract becomes empty
+
+On SIGTERM or SIGINT:
+
+- stop restarting services
+- send SIGTERM to every service contract
+- wait up to the graceful shutdown timeout
+- SIGKILL anything still alive
+- wait for all contracts to become empty
+- abandon the contracts and exit
+
 ```
 $ ctsup -h
 Usage: ctsup <dir>

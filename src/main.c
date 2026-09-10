@@ -6,7 +6,7 @@
  *     ctsup /path/to/services
  *
  * Every regular executable file directly inside the directory is treated
- * as a service:
+ * as a service, for example::
  *
  *     services/
  *         dnsmasq
@@ -15,8 +15,8 @@
  * Each service:
  *
  *   - is executed directly (no shell)
- *   - receives its own illumos process contract
- *   - is restarted RESTART_DELAY second after its contract becomes empty
+ *   - receives its own contract
+ *   - is restarted RESTART_DELAY (1 second) after its contract becomes empty
  *
  * On SIGTERM or SIGINT:
  *
