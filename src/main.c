@@ -861,7 +861,7 @@ main(int argc, char **argv)
 {
 	int exit_status = 0;
 	g_opts.color = getenv("NO_COLOR") == NULL &&
-	               getenv("CTSUP_NO_COLOR") == NULL;
+	    getenv("CTSUP_NO_COLOR") == NULL;
 	g_opts.quiet = getenv("CTSUP_QUIET") != NULL;
 
 	if (argc < 2) {
