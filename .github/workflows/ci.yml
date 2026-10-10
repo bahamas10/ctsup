@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  illumos:
+    name: Test (illumos, OmniOS r151058)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: vmactions/omnios-vm@v1
+        with:
+          # Comes with build-essential, for the linker and C compiler.
+          release: r151058-build
+          copyback: false
+          run: |
+            make
+            make check
