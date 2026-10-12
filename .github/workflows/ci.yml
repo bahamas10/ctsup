@@ -10,6 +10,7 @@ permissions:
 
 env:
   COLOR: 1
+  DEBUG: 1
 
 jobs:
   illumos:
@@ -22,7 +23,7 @@ jobs:
           # Comes with build-essential, for the linker and C compiler.
           release: r151058-build
           copyback: false
-          envs: COLOR
+          envs: COLOR DEBUG
           run: |
             make
             make check

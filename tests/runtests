@@ -205,10 +205,11 @@ start-supervisor() {
 
 	(
 		cd "$fixture" || exit 1
-		exec env NO_COLOR=1 "$ctsup" .
+		export NO_COLOR=1
+		exec "$ctsup" .
 	) >"$output" 2>&1 &
-
 	pid=$!
+
 	echo "$pid" > "$CTSUP_PID_FILE" \
 	    || fatal "failed to write pid file $CTSUP_PID_FILE"
 
