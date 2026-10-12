@@ -698,8 +698,19 @@ load_services(const char *dir)
 			continue;
 		}
 
-		// skip files that aren't executable
+		// skip files that aren't executable by this process
 		if (access(path, X_OK) == -1) {
+			continue;
+		}
+
+		// require at least one executable mode bit.  access(X_OK)
+		// may succeed without one when the caller has privileges.
+		//
+		// from access(2):
+		// > If the process has appropriate privileges, an
+		// > implementation may indicate success for X_OK even if none
+		// > of the execute file permission bits are set.
+		if ((st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {
 			continue;
 		}
 
