@@ -1,0 +1,394 @@
+#!/usr/bin/env bash
+#
+# testing for ctsup
+#
+# # Created
+# Author: Dave Eddy <ysap@daveeddy.com>
+# Date: October 11, 2026
+# License: MIT
+#
+# # Contributors
+# - Dave Eddy <ysap@daveeddy.com>
+
+ctsup=$PWD/../ctsup
+fixtures=$PWD/fixtures
+
+CTSUP_PID_FILE=$PWD/tmp/ctsup.$$.pid
+
+tests_run=0
+tests_failed=0
+
+# colors
+if [[ -z $NO_COLOR ]] && [[ -t 1 || -n $COLOR ]]; then
+	red=$'\e[31m'
+	grn=$'\e[32m'
+	bld=$'\e[1m'
+	dim=$'\e[2m'
+	rst=$'\e[0m'
+else
+	red=
+	grn=
+	bld=
+	dim=
+	rst=
+fi
+
+# print a message and exit with a failure
+fatal() {
+	echo "$red[FATAL]$rst $*" >&2
+	exit 1
+}
+
+# print a debug message
+debug() {
+	[[ -n $DEBUG ]] && echo "$dim[DEBUG] $*$rst"
+	return 0
+}
+
+# kill the running backgrounded supervisor if one has been executed
+kill-supervisor() {
+	local pid=$(cat "$CTSUP_PID_FILE" 2>/dev/null)
+	[[ -n $pid ]] || return
+
+	debug "kill-supervisor pid: $pid"
+
+	kill -TERM "$pid" 2>/dev/null
+	sleep 1
+	kill -KILL "$pid" 2>/dev/null
+	wait "$pid" 2>/dev/null
+
+	rm -f "$CTSUP_PID_FILE"
+}
+
+# clear all files from the test root dir
+clear-test-root() {
+	rm -f ./tmp/root/*
+	debug 'clear-test-root cleared ./tmp/root'
+}
+
+# cleanup after ourseves - called at EXIT
+cleanup() {
+	kill-supervisor
+	clear-test-root
+}
+
+# report a test failure
+fail() {
+	echo "${red}failed${rst}"
+	echo "$*"
+	exit 1
+}
+
+# ensure an exit code is what we expect
+# usage: assert-status 0 "$?"
+assert-status() {
+	local expected=$1
+	local actual=$2
+
+	if ((actual != expected)); then
+		fail "expected status $expected, got $actual"
+	fi
+	return 0
+}
+
+# ensure a text file contains the given text
+# usage: assert-contains <file> <text>
+assert-contains() {
+	local file=$1
+	local text=$2
+
+	if ! grep -q -F "$text" "$file"; then
+		debug "assert-contains file has"
+		debug "$(cat "$file")"
+
+		fail "expected '$text' in $file"
+	fi
+	return 0
+}
+
+# ensure a text file does NOT contain the given text
+# usage: assert-not-contains <file> <text>
+assert-not-contains() {
+	local file=$1
+	local text=$2
+
+	if grep -F "$text" "$file" >/dev/null 2>&1; then
+		fail "did not expect '$text' in $file"
+	fi
+	return 0
+}
+
+# wait until <text> shows up in <file> at *least* <expected> times, retrying up
+# to <tries> times
+#
+# usage: wait-for-count <file> <text> <num> <msg>
+wait-for-count() {
+	local file=$1
+	local text=$2
+	local expected=$3
+	local msg=$4
+
+	local tries=100
+
+	local actual i
+	for ((i = 0; i < tries; i++)); do
+		actual=0
+		if [[ -f $file ]]; then
+			actual=$(grep -F -c "$text" "$file" 2>/dev/null)
+		fi
+
+		if ((actual >= expected)); then
+			return 0
+		fi
+
+		sleep 0.1
+	done
+
+	fail "$msg"
+}
+
+# same as above but stops once 1 instance of the text is seen:
+#
+# usage: wait-for-text <file> <text> <msg>
+wait-for-text() {
+	wait-for-count "$1" "$2" 1 "$3"
+}
+
+# kill the supervisor (if one was created) with a watchdog to force kill it
+# if a timeout is reached
+stop-supervisor() {
+	local pid=$(cat "$CTSUP_PID_FILE" 2>/dev/null)
+	[[ -n $pid ]] || return 0
+
+	debug "stop-supervisor pid: $pid"
+
+	local timeout_file=./stop-supervisor-timeout.$$
+	local watchdog code
+	(
+		sleep 15
+		debug 'stop-supervisor watchdog timeout - sending SIGKILL'
+		: > "$timeout_file"
+
+		kill -KILL "$pid" 2>/dev/null
+		rm -f "$CTSUP_PID_FILE"
+	) &
+	watchdog=$!
+
+	kill -TERM "$pid"
+	wait "$pid"
+	code=$?
+
+	rm -f "$CTSUP_PID_FILE"
+
+	kill "$watchdog" 2>/dev/null
+	wait "$watchdog" 2>/dev/null
+
+	if [[ -e $timeout_file ]]; then
+		rm -f "$timeout_file"
+		code=124 # convention for timeout
+	fi
+
+	return "$code"
+}
+
+# start a new supervisor process with the given dir and output path
+# usage: start-supervisor <dir> <output-file>
+start-supervisor() {
+	local pid=$(cat "$CTSUP_PID_FILE" 2>/dev/null)
+	if [[ -n $pid ]]; then
+		fatal "start-supervisor called while supervisor already" \
+		    "running: $pid"
+	fi
+
+	local fixture=$1
+	local output=$2
+
+	(
+		cd "$fixture" || exit 1
+		exec env NO_COLOR=1 "$ctsup" .
+	) >"$output" 2>&1 &
+
+	pid=$!
+	echo "$pid" > "$CTSUP_PID_FILE" \
+	    || fatal "failed to write pid file $CTSUP_PID_FILE"
+
+	debug "start-supervisor for $fixture pid: $pid"
+}
+
+#### Specific tests
+
+test-usage() {
+	local code
+
+	"$ctsup" >stdout 2>stderr
+	code=$?
+	assert-status 2 "$code"
+	assert-contains ./stderr 'Usage: ctsup <dir>'
+
+	"$ctsup" --help >help 2>&1
+	code=$?
+	assert-status 0 "$code"
+	assert-contains ./help 'Environment Variables'
+}
+
+test-missing-directory() {
+	local code
+
+	"$ctsup" ./does-not-exist >output 2>&1
+	code=$?
+	assert-status 1 "$code"
+	assert-contains ./output 'does-not-exist'
+}
+
+run-fixture-discovery() {
+	local fixture=$1
+	local code
+
+	start-supervisor "$fixture" ./output
+
+	wait-for-text ./output 'READY' 'service did not start'
+	assert-contains ./output 'found 1 serviceee files'
+	assert-not-contains ./output 'UNEXPECTED'
+
+	stop-supervisor
+
+	code=$?
+	assert-status 0 "$code"
+	assert-contains ./output 'TERM'
+
+	return 0
+}
+
+run-fixture-empty() {
+	local fixture=$1
+	local code
+
+	(
+		cd "$fixture" || exit 1
+		NO_COLOR=1 "$ctsup" .
+	) >./output 2>&1
+	code=$?
+
+	assert-status 1 "$code"
+	assert-contains ./output 'no executable services in .'
+
+	return 0
+}
+
+run-fixture-restart() {
+	local fixture=$1
+	local code
+
+	start-supervisor "$fixture" ./output
+
+	wait-for-count ./output START 2 'service was not restarted'
+
+	stop-supervisor
+	code=$?
+
+	assert-status 0 "$code" || return 1
+	assert-contains ./output "restarting in 1 second(s)"
+
+	return 0
+}
+
+run-fixture-stubborn() {
+	local fixture=$1
+	local code
+
+	start-supervisor "$fixture" ./output
+
+	wait-for-text ./output 'READY' 'service did not start'
+
+	stop-supervisor
+	code=$?
+
+	assert-status 0 "$code"
+	assert-contains ./output 'shutdown timeout reached'
+	assert-contains ./output 'sending SIGKILL'
+
+	return 0
+}
+
+### main test entry points
+
+# usage: run-fixture <name>
+#
+# this will dispatch to a function named: test-fixture-<name>
+run-fixture() {
+	local fixture=${1%/}
+
+	local name=${fixture##*/}
+	local fn=run-fixture-$name
+
+	if ! declare -F "$fn" >/dev/null; then
+		fail "fixture '$name' has no matching test function"
+		return 1
+	fi
+
+	"$fn" "$fixture"
+}
+
+# run a test with the given name:
+# usage: run-test <name> <args ...>
+run-test() {
+	local name=$1
+	local code
+
+	debug "run-test name: $name"
+
+	shift
+
+	((tests_run++))
+	echo -n "${bld}testing $name...${rst} "
+	[[ -n $DEBUG ]] && echo
+
+	# create a fresh test environment for the function
+	clear-test-root
+
+	# run the test in the root inside a subshell
+	(cd ./tmp/root && "$@")
+	code=$?
+
+	if ((code == 0)); then
+		echo "${grn}ok${rst}"
+	else
+		echo "${red}failed${rst}"
+		((tests_failed++))
+	fi
+
+	kill-supervisor
+}
+
+shopt -s nullglob
+
+[[ -x $ctsup ]] || fatal "$ctsup is missing - run 'make' first"
+[[ -d $fixtures ]] || fatal "$fixtures is missing - are you in the right dir?"
+
+trap cleanup EXIT
+
+mkdir -p tmp/root
+
+echo "${bld}Running ctsup tests${rst}"
+echo
+
+# run static tests
+run-test 'usage and help' test-usage
+run-test 'missing service directory' test-missing-directory
+
+# auto-discover test fixtures
+for fixture in "$fixtures"/*/; do
+	[[ -d $fixture ]] || continue
+
+	name=${fixture%/}
+	name=${name##*/}
+	run-test "fixture: $name" run-fixture "$fixture"
+done
+echo
+
+if ((tests_failed > 0)); then
+	echo "$tests_failed of $tests_run tests failed"
+	exit 1
+fi
+
+echo "all $tests_run tests passed"

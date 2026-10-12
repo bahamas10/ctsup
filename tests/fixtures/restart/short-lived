@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo START
+exit 0

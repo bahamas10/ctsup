@@ -1,0 +1,8 @@
+#!/bin/sh
+
+trap : TERM
+
+echo READY
+while :; do
+	sleep 1
+done

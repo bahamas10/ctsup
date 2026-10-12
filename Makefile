@@ -7,9 +7,13 @@ ctsup: src/main.c
 
 .PHONY: check
 check:
-	./tools/check ./src/*.c ./tools/* *.md Makefile
+	./tools/check ./src/*.c ./tests/* ./tests/fixtures/*/* ./tools/* *.md \
+	    Makefile
+
+.PHONY: test
+test: ctsup
+	cd ./tests && ./runtests
 
 .PHONY: clean
 clean:
 	rm -f ctsup
-

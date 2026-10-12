@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+env:
+  COLOR: 1
+
+
 jobs:
   illumos:
     name: Test (illumos, OmniOS r151058)
@@ -22,3 +26,4 @@ jobs:
           run: |
             make
             make check
+            make test

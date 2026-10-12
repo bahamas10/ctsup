@@ -72,11 +72,14 @@ Ensure your code passes the style checks:
 
 ```
 $ make check
-./tools/check ./src/*.c ./tools/* *.md Makefile
-checking:  ./src/main.c
-checking:  ./tools/check
-checking:  README.md
-checking:  Makefile
+...
+```
+
+Run the integration tests (must be run on illumos):
+
+```
+$ make test
+...
 ```
 
 License
