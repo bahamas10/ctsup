@@ -247,7 +247,7 @@ run-fixture-discovery() {
 	start-supervisor "$fixture" ./output
 
 	wait-for-text ./output 'READY' 'service did not start'
-	assert-contains ./output 'found 1 serviceee files'
+	assert-contains ./output 'found 1 service files'
 	assert-not-contains ./output 'UNEXPECTED'
 
 	stop-supervisor
