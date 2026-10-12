@@ -1,6 +1,6 @@
 #!/bin/sh
 
-trap 'echo TERM; exit 0' TERM INT
+trap 'echo DAEMON_GOT_TERM; exit 0' TERM INT
 
 echo READY
 while :; do

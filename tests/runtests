@@ -255,7 +255,7 @@ run-fixture-discovery() {
 
 	code=$?
 	assert-status 0 "$code"
-	assert-contains ./output 'TERM'
+	assert-contains ./output 'DAEMON_GOT_TERM'
 
 	return 0
 }
