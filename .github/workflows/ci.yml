@@ -16,6 +16,7 @@ jobs:
   illumos:
     name: Test (illumos, OmniOS r151058)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: vmactions/omnios-vm@v1
