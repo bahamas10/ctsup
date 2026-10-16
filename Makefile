@@ -7,8 +7,8 @@ ctsup: src/main.c
 
 .PHONY: check
 check:
-	./tools/check ./src/*.c ./tests/* ./tests/fixtures/*/* ./tools/* *.md \
-	    Makefile
+	./tools/style-check ./src/*.c ./tests/* ./tests/fixtures/*/* \
+	    ./tools/* *.md Makefile
 
 .PHONY: test
 test: ctsup
